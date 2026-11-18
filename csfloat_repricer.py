@@ -191,6 +191,15 @@ def run_once(s, dry_run):
 
         target = int(market * (1 - UNDERCUT_PCT / 100))
 
+        # HAUSSE : on ne monte que si l'annonce de référence a un float SIMILAIRE
+        # (écart <= FLOAT_TOLERANCE_PCT %). Une annonce chère avec un bien meilleur
+        # float ne prouve pas que ton skin vaut ce prix-là -> prix inchangé.
+        if (target > current and my_float is not None and market_float is not None
+                and abs(market_float - my_float) > my_float * FLOAT_TOLERANCE_PCT / 100):
+            print(f"  [=]       {label} : {usd(current)} inchangé "
+                  f"(seule réf. = float bien meilleur : {ref})")
+            continue
+
         # Garde-fous
         floor = int(FLOORS_USD.get(name, 0) * 100)
         max_drop = int(current * (1 - MAX_DROP_PCT_PER_RUN / 100))
