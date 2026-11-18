@@ -110,7 +110,7 @@ def float_cap(my_float):
     return my_float * (1 + FLOAT_TOLERANCE_PCT / 100)
 
 
-def lowest_market_price(s, market_hash_name, my_id, my_float):
+def lowest_market_price(s, market_hash_name, my_id, my_float, my_listing_ids=frozenset()):
     """
     Annonce achat immédiat la moins chère du même skin, hors les miennes,
     avec un float <= float_cap(my_float). Renvoie (prix en cents, float) ou None.
@@ -129,8 +129,14 @@ def lowest_market_price(s, market_hash_name, my_id, my_float):
 
     page, _ = as_list(get(s, "/listings", **params))
     for l in page:
+        # On ignore ses propres annonces : par leur id (fiable) ET par vendeur
+        if str(l.get("id")) in my_listing_ids:
+            continue
+        asset = (l.get("item") or {}).get("asset_id")
+        if asset and "asset:" + str(asset) in my_listing_ids:
+            continue
         seller = str((l.get("seller") or {}).get("steam_id", ""))
-        if seller == my_id:
+        if seller and seller == my_id:
             continue
         f = (l.get("item") or {}).get("float_value")
         # Double vérification côté script, au cas où le filtre de l'API serait ignoré
@@ -156,7 +162,12 @@ def usd(cents):
 
 def run_once(s, dry_run):
     my_id = my_steam_id(s)
-    listings = [l for l in my_listings(s, my_id) if l.get("type") == "buy_now"]
+    all_mine = my_listings(s, my_id)
+    # ids des annonces ET des objets (asset_id) : double protection anti auto-concurrence
+    my_listing_ids = frozenset(str(l.get("id")) for l in all_mine) | frozenset(
+        "asset:" + str((l.get("item") or {}).get("asset_id")) for l in all_mine
+        if (l.get("item") or {}).get("asset_id"))
+    listings = [l for l in all_mine if l.get("type") == "buy_now"]
     print(f"\n{time.strftime('%Y-%m-%d %H:%M:%S')} - {len(listings)} annonce(s) achat immédiat")
 
     for l in listings:
@@ -170,7 +181,7 @@ def run_once(s, dry_run):
             print(f"  [ignoré]  {label}")
             continue
 
-        found = lowest_market_price(s, name, my_id, my_float)
+        found = lowest_market_price(s, name, my_id, my_float, my_listing_ids)
         if found is None:
             print(f"  [meilleur] {label} : aucune annonce avec un float aussi bon, "
                   f"prix inchangé ({usd(current)})")
