@@ -1,0 +1,26 @@
+name: CSFloat repricer
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # toutes les 30 minutes
+  workflow_dispatch:          # bouton "Run workflow" pour lancer à la main
+
+concurrency:
+  group: repricer
+  cancel-in-progress: false
+
+jobs:
+  reprice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Ajuster les prix
+        env:
+          CSFLOAT_API_KEY: ${{ secrets.CSFLOAT_API_KEY }}
+        # --dry-run = mode test : on l'enlève une fois les résultats validés
+        run: python csfloat_repricer.py --dry-run
