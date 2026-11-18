@@ -50,7 +50,7 @@ FLOORS_USD = {
 
 # Skins à ne jamais toucher (float rare, stickers chers, pattern spécial...).
 EXCLUDE = {
-    # "Karambit | Case Hardened (Factory New)",
+    "MP7 | Fade (Factory New)",
 }
 
 # =====================================================
